@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import shutil
 import os
 import openai
-
+from pathlib import Path
 load_dotenv()
 
 DATA_PATH = "data/books"
@@ -23,6 +23,16 @@ def load_documents():
     documents = loader.load()
     return documents
 
+# Method for adding information at the start and end of the chunks
+def add_info_to_chunks(chunks, prefix , suffix):
+    if prefix is None or prefix == "":
+        prefix = "No hay titulo del articulo"
+    if suffix is None or suffix == "":
+        suffix = "No se tiene una firma"
+
+    for chunk in chunks:
+        chunk.page_content = f"{prefix}\n{chunk.page_content}\n{suffix}"
+
 # Set how we want our chunking to be done
 
 def split_text(documents: list[Document]):
@@ -35,6 +45,10 @@ def split_text(documents: list[Document]):
     )
 
     chunks = text_splitter.split_documents(documents)
+
+    source_of_documents = chunks[10].metadata.get("source" , "")
+    title = Path(source_of_documents).name
+    add_info_to_chunks(chunks, title, "Firmado por Alejito")
     
     # Print how many documents we got and how many chunks they generated
     print(f"Split {len(documents)} documents into {len(chunks)} chunks.")
@@ -55,7 +69,6 @@ def save_to_chroma(chunks: list[Document]):
     db = Chroma.from_documents(
         chunks, OpenAIEmbeddings(), persist_directory=CHROMA_PATH
     )
-    db.persist()
 
     print(f"Saved {len(chunks)} chunks to {CHROMA_PATH}.")
 
