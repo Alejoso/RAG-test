@@ -8,6 +8,7 @@ import shutil
 import os
 import openai
 from pathlib import Path
+import logging
 load_dotenv()
 
 DATA_PATH = "data/books"
@@ -15,10 +16,17 @@ CHROMA_PATH  = "chroma"
 
 openai.api_key = os.environ['OPENAI_API_KEY']
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename='create_db.log',
+    filemode='w'
+)
 
 # Load all the .txt files that we currently have in our books folder
 
 def load_documents():
+    logging.info("Loading documents...")
     loader = DirectoryLoader(DATA_PATH , glob="*.txt")
     documents = loader.load()
     return documents
@@ -36,7 +44,7 @@ def add_info_to_chunks(chunks, prefix , suffix):
 # Set how we want our chunking to be done
 
 def split_text(documents: list[Document]):
-
+    logging.info("Creating chunks...")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000, # Set the chunk size in characters
         chunk_overlap=500, # Each chunk is going to have an overlap of 500 characters
@@ -48,25 +56,30 @@ def split_text(documents: list[Document]):
 
     source_of_documents = chunks[10].metadata.get("source" , "")
     title = Path(source_of_documents).name
-    add_info_to_chunks(chunks, title, "Firmado por Alejito")
+    add_info_to_chunks(chunks, title, "Firmado por Alejito") # Change when we got the original information
     
     # Print how many documents we got and how many chunks they generated
     print(f"Split {len(documents)} documents into {len(chunks)} chunks.")
 
-    # See the content of chunk number 10
+    # See the content of chunk number 10 on the logs
+    logging.info(f"Split {len(documents)} documents into {len(chunks)} chunks.")
     document = chunks[10]
-    print(document.page_content)
-    print(document.metadata)
+    logging.info(
+        "Example of chunk number 10:\n%s\n\n--- METADATA ---\n%s",
+        document.page_content,
+        document.metadata
+    )
 
     return chunks
 
 def save_to_chroma(chunks: list[Document]):
+    logging.info("Saving information to db...")
     # Delete the data base if there is one already created
     if os.path.exists(CHROMA_PATH):
         shutil.rmtree(CHROMA_PATH)
 
     # Save the chunks into a chroma database using OpeinAIEmbeddings 
-    db = Chroma.from_documents(
+    Chroma.from_documents(
         chunks, OpenAIEmbeddings(), persist_directory=CHROMA_PATH
     )
 
@@ -78,8 +91,12 @@ def main():
     save_to_chroma(chunks)
 
 if __name__ == "__main__":
-    main()
-
+    try:
+        main()
+        logging.info("Finished :)")
+    except:
+        logging.error("Something went bad :(")
+    
 
 
 
