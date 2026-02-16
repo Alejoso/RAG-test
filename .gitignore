@@ -3,4 +3,4 @@ venv
 chroma_*
 chroma
 .DS_Store
-create_db.log
+*.log
