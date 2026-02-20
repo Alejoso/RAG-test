@@ -4,3 +4,7 @@ chroma_*
 chroma
 .DS_Store
 *.log
+data
+dataCleaned
+dataCleanedExample
+aaa
